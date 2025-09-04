@@ -1,0 +1,62 @@
+Simple DeFi DApp
+
+这是一个简单的去中心化金融 (DeFi) 示例项目，包括智能合约 (Hardhat) 和前端界面 (React + Vite)。
+
+项目结构
+simple-defi-dapp/
+├─ contracts/          # 智能合约 (Solidity)
+│  ├─ MockERC20.sol    # ERC20 代币合约
+│  └─ SimpleAMM.sol    # 简单 AMM (自动做市商) 合约
+├─ scripts/
+│  └─ deploy.js        # 部署脚本
+├─ test/               # Hardhat 测试
+│  ├─ SimpleAMM.test.js
+│  └─ RemoveLiquidity.test.js
+├─ frontend/           # 前端 (React + Vite)
+│  ├─ src/App.tsx
+│  ├─ index.html
+│  ├─ vite.config.ts
+│  └─ package.json
+├─ hardhat.config.js   # Hardhat 配置
+└─ package.json        # 根目录 npm 配置
+
+部署与测试
+
+安装依赖：
+
+npm install
+
+
+编译合约：
+
+npx hardhat compile
+
+
+运行测试：
+
+npx hardhat test
+
+
+部署合约到本地网络：
+
+npx hardhat node
+npx hardhat run scripts/deploy.js --network localhost
+
+
+部署后会输出 TokenA、TokenB 和 AMM 合约地址。
+
+前端运行
+
+进入前端目录：
+
+cd frontend
+npm install
+npm run dev
+
+
+默认启动在 http://localhost:3000
+。
+
+前端会提示连接钱包 (MetaMask)，并与已部署的合约交互。
+
+✨ 现在你就可以在本地跑一个最简单的 DeFi DApp 了！
