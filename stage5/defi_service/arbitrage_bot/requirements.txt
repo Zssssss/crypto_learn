@@ -1,2 +1,36 @@
+# Web3 和区块链相关
 web3==6.11.3
-eth_account
+eth-account==0.10.0
+eth-utils==2.3.1
+hexbytes==0.3.1
+
+# 环境变量和配置
+python-dotenv==1.0.0
+
+# 日志和监控
+colorlog==6.7.0
+
+# 网络请求（用于 Telegram 通知）
+requests==2.31.0
+
+# 数据处理
+pandas==2.1.3
+numpy==1.24.3
+
+# 异步处理（可选，用于提高性能）
+aiohttp==3.9.1
+asyncio==3.4.3
+
+# 测试相关
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0
+
+# 代码质量
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.0
+
+# 性能分析（可选）
+memory-profiler==0.61.0
+line-profiler==4.1.1

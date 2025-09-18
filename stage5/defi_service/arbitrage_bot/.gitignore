@@ -1,0 +1,94 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+*.log
+profile.stats
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Hardhat
+arb-executor/artifacts/
+arb-executor/cache/
+arb-executor/coverage/
+arb-executor/coverage.json
+arb-executor/typechain/
+arb-executor/typechain-types/
+arb-executor/.openzeppelin/
+
+# Deployments
+arb-executor/deployments/
+
+# Logs
+logs/
+*.log
+
+# Backups
+backups/
+
+# Documentation
+*.html
+pydoc/
+
+# Testing
+.coverage
+.pytest_cache/
+test-results/
+
+# Security
+*.pem
+*.key
+*.cert
+
+# Temporary files
+*.tmp
+*.bak
+*.backup

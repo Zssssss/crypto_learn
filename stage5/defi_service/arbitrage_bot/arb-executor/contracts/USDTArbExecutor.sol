@@ -33,7 +33,7 @@ contract USDTArbExecutor is Ownable {
         IERC20(usdt).approve(router, amountIn);
 
         // step 3: swap USDT -> midToken
-        address ;
+        address[] memory path = new address[](2);
         path[0] = usdt;
         path[1] = midToken;
 
@@ -51,7 +51,7 @@ contract USDTArbExecutor is Ownable {
         // step 4: swap midToken -> USDT
         IERC20(midToken).approve(router, midBalance);
 
-        address ;
+        address[] memory pathBack = new address[](2);
         pathBack[0] = midToken;
         pathBack[1] = usdt;
 
