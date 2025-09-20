@@ -18,11 +18,11 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import set_random_seed
 
 from env.trading_env import TradingEnv
-from data_loader import load_csv, add_technical_indicators
-from utils import calculate_sharpe_ratio, save_backtest_results
+from data_loader import load_csv
+from utils import add_technical_indicators, calculate_performance_metrics, setup_logging
 
 # 设置日志
-logging.basicConfig(level=logging.INFO)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -38,7 +38,6 @@ def make_env(df: pd.DataFrame, config: dict, rank: int = 0):
             max_position_size=config["env"].get("max_position_size", 1.0)
         )
         env = Monitor(env)
-        env.seed(rank)
         return env
     return _init
 
@@ -61,14 +60,14 @@ def create_training_env(config: dict, n_envs: int = 4):
     return env
 
 
-def create_eval_env(config: dict):
+def create_eval_env(config: dict, train_ratio: float = 0.7):
     """创建评估环境"""
     # 加载数据
     df = load_csv(config["data"]["csv_path"])
     df = add_technical_indicators(df)
     
     # 使用不同的数据分割进行评估
-    split_idx = int(len(df) * 0.8)
+    split_idx = int(len(df) * train_ratio)
     eval_df = df[split_idx:]
     
     env = TradingEnv(
@@ -102,6 +101,10 @@ def train_ppo(config_path: str = "configs/config.yaml"):
     # 创建模型保存目录
     model_dir = "models"
     os.makedirs(model_dir, exist_ok=True)
+    os.makedirs(os.path.join(model_dir, "checkpoints"), exist_ok=True)
+    os.makedirs(os.path.join(model_dir, "best_model_ppo"), exist_ok=True)
+    os.makedirs(os.path.join(model_dir, "logs_ppo"), exist_ok=True)
+    os.makedirs(os.path.join(model_dir, "tensorboard_ppo"), exist_ok=True)
     
     # 创建回调
     checkpoint_callback = CheckpointCallback(
@@ -158,21 +161,26 @@ def train_ppo(config_path: str = "configs/config.yaml"):
     logger.info("Evaluating final model...")
     obs, _ = eval_env.reset()
     done = False
-    total_reward = 0
+    trades = []
     
     while not done:
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, done, _, info = eval_env.step(action)
-        total_reward += reward
+        
+        # 收集交易信息
+        if hasattr(eval_env, 'env'):
+            env_instance = eval_env.env
+        else:
+            env_instance = eval_env
+            
+        trades.extend(env_instance.get_trades())
     
-    logger.info(f"Final evaluation reward: {total_reward}")
-    
-    # 保存交易记录
-    trades = eval_env.get_trades() if hasattr(eval_env, 'get_trades') else []
+    # 计算性能指标
     if trades:
-        results_file = f"ppo_backtest_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        save_backtest_results(trades, results_file)
-        logger.info(f"Backtest results saved to {results_file}")
+        metrics = calculate_performance_metrics(trades, config["account"]["initial_balance"])
+        logger.info("Performance Metrics:")
+        for key, value in metrics.items():
+            logger.info(f"  {key}: {value:.4f}")
     
     # 清理环境
     env.close()

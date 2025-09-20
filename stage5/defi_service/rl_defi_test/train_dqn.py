@@ -17,11 +17,11 @@ from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 from stable_baselines3.common.monitor import Monitor
 
 from env.trading_env import TradingEnv
-from data_loader import load_csv, add_technical_indicators
-from utils import calculate_sharpe_ratio, calculate_max_drawdown, save_backtest_results
+from data_loader import load_csv
+from utils import add_technical_indicators, calculate_performance_metrics, setup_logging
 
 # 设置日志
-logging.basicConfig(level=logging.INFO)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -34,28 +34,6 @@ class TradingCallback(EvalCallback):
         
     def _on_step(self) -> bool:
         """每步回调"""
-        if self.n_calls % self.eval_freq == 0:
-            # 评估模型性能
-            episode_rewards = []
-            for _ in range(self.n_eval_episodes):
-                obs, _ = self.eval_env.reset()
-                done = False
-                episode_reward = 0
-                
-                while not done:
-                    action, _ = self.model.predict(obs, deterministic=True)
-                    obs, reward, done, _, info = self.eval_env.step(action)
-                    episode_reward += reward
-                    
-                episode_rewards.append(episode_reward)
-            
-            # 计算夏普比率
-            if len(episode_rewards) > 1:
-                sharpe = calculate_sharpe_ratio(np.array(episode_rewards))
-                if sharpe > self.best_sharpe:
-                    self.best_sharpe = sharpe
-                    logger.info(f"New best Sharpe ratio: {sharpe:.4f}")
-                    
         return super()._on_step()
 
 
@@ -83,14 +61,14 @@ def create_training_env(config: dict) -> TradingEnv:
     return env
 
 
-def create_eval_env(config: dict) -> TradingEnv:
+def create_eval_env(config: dict, train_ratio: float = 0.7) -> TradingEnv:
     """创建评估环境"""
-    # 使用相同的数据创建评估环境
+    # 加载数据
     df = load_csv(config["data"]["csv_path"])
     df = add_technical_indicators(df)
     
     # 使用不同的数据分割进行评估
-    split_idx = int(len(df) * 0.8)
+    split_idx = int(len(df) * train_ratio)
     eval_df = df[split_idx:]
     
     env = TradingEnv(
@@ -120,6 +98,10 @@ def train_dqn(config_path: str = "configs/config.yaml"):
     # 创建模型保存目录
     model_dir = "models"
     os.makedirs(model_dir, exist_ok=True)
+    os.makedirs(os.path.join(model_dir, "checkpoints"), exist_ok=True)
+    os.makedirs(os.path.join(model_dir, "best_model"), exist_ok=True)
+    os.makedirs(os.path.join(model_dir, "logs"), exist_ok=True)
+    os.makedirs(os.path.join(model_dir, "tensorboard"), exist_ok=True)
     
     # 创建回调
     checkpoint_callback = CheckpointCallback(
@@ -128,7 +110,7 @@ def train_dqn(config_path: str = "configs/config.yaml"):
         name_prefix="dqn_perp"
     )
     
-    eval_callback = TradingCallback(
+    eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=os.path.join(model_dir, "best_model"),
         log_path=os.path.join(model_dir, "logs"),
@@ -171,26 +153,22 @@ def train_dqn(config_path: str = "configs/config.yaml"):
     logger.info("Evaluating final model...")
     obs, _ = eval_env.reset()
     done = False
-    total_reward = 0
+    trades = []
     
     while not done:
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, done, _, info = eval_env.step(action)
-        total_reward += reward
-    
-    logger.info(f"Final evaluation reward: {total_reward}")
-    
-    # 保存交易记录
-    if hasattr(eval_env, 'get_attr'):
-        env_instance = eval_env.get_attr('env')[0]
-    else:
-        env_instance = eval_env
         
-    trades = env_instance.get_trades()
+        # 收集交易信息
+        if 'trades' in info:
+            trades.extend(info['trades'])
+    
+    # 计算性能指标
     if trades:
-        results_file = f"backtest_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        save_backtest_results(trades, results_file)
-        logger.info(f"Backtest results saved to {results_file}")
+        metrics = calculate_performance_metrics(trades, config["account"]["initial_balance"])
+        logger.info("Performance Metrics:")
+        for key, value in metrics.items():
+            logger.info(f"  {key}: {value:.4f}")
     
     return model
 

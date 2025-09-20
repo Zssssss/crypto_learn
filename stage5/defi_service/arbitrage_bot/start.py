@@ -64,21 +64,14 @@ def install_dependencies():
         print("❌ 依赖安装失败")
         return False
 
-def run_bot(mode='monitor'):
+def run_bot(mode='monitor', enhanced=False):
     """运行机器人"""
     print("\n🚀 启动套利机器人...")
     print("=" * 60)
     
     # 选择运行的脚本
-    if mode == 'advanced':
-        script_name = "arbitrage_bot_advanced.py"
-        version = "高级版"
-    elif mode == 'optimized':
-        script_name = "arbitrage_bot_optimized.py"
-        version = "优化版"
-    else:
-        script_name = "arbitrage_bot.py"
-        version = "基础版"
+    script_name = "arbitrage_bot_enhanced.py" if enhanced else "arbitrage_bot.py"
+    version = "增强版 V4" if enhanced else "标准版 V3"
     
     if mode == 'monitor':
         # 监听模式
@@ -86,28 +79,15 @@ def run_bot(mode='monitor'):
         print("💡 提示: 按 Ctrl+C 停止运行")
         print("=" * 60)
         
-        if mode == 'advanced':
-            print("🔥 高级版功能:")
-            print("  ✅ 6个DEX支持")
-            print("  ✅ 16个代币")
-            print("  ✅ 直接套利 + 三角套利")
-            print("  ✅ 超低检测阈值 (0.01%)")
-            print("  ✅ 更快扫描 (0.5秒)")
-            print("  ✅ 更低门槛 (0.1 USDT)")
-        elif mode == 'optimized':
-            print("🔥 优化版功能:")
-            print("  ✅ 4个DEX支持")
-            print("  ✅ 10个代币对")
-            print("  ✅ 异步并行扫描")
-            print("  ✅ 更低检测阈值 (0.05%)")
-            print("  ✅ 优化Gas估算")
-        else:
-            print("🔥 基础功能:")
-            print("  ✅ Uniswap V2/V3支持")
-            print("  ✅ 跨DEX套利")
-            print("  ✅ 实时价格监控")
-            print("  ✅ 机会记录和分析")
-        print("=" * 60)
+        if enhanced:
+            print("🔥 增强功能已启用:")
+            print("  ✅ 多DEX支持 (10+)")
+            print("  ✅ 三角套利")
+            print("  ✅ 多跳套利 (最多4跳)")
+            print("  ✅ 闪电贷支持")
+            print("  ✅ MEV保护")
+            print("  ✅ 实时流动性分析")
+            print("=" * 60)
         
         try:
             subprocess.run([sys.executable, script_name])
@@ -123,10 +103,17 @@ def run_bot(mode='monitor'):
         # 测试模式
         print(f"🧪 运行测试模式（{version}）...")
         # 设置测试环境变量
-        os.environ['SCAN_INTERVAL'] = '0.5'
-        os.environ['MIN_PROFIT_USDT'] = '0.05'
-        os.environ['MIN_PRICE_DIFF_PCT'] = '0.005'
-        print(f"📝 使用测试参数: 扫描间隔=0.5秒, 最小利润=0.05 USDT, 最小价差=0.005%")
+        os.environ['SCAN_INTERVAL'] = '5'
+        os.environ['MIN_NET_PROFIT_USDT'] = '0.1' if not enhanced else '0.5'
+        os.environ['MIN_PROFIT_USDT'] = '0.1' if not enhanced else '0.5'
+        print(f"📝 使用测试参数: 扫描间隔=5秒, 最小利润={os.environ['MIN_NET_PROFIT_USDT']} USDT")
+        
+        if enhanced:
+            # 增强版测试参数
+            os.environ['ENABLE_TRIANGULAR'] = 'true'
+            os.environ['ENABLE_MULTI_HOP'] = 'true'
+            os.environ['MAX_HOPS'] = '3'
+            print("📝 增强测试: 三角套利=启用, 多跳=启用, 最大跳数=3")
         
         try:
             subprocess.run([sys.executable, script_name])
@@ -216,7 +203,9 @@ def main():
         epilog="""
 示例:
   python start.py                    # 启动标准版监听机器人
+  python start.py --enhanced         # 启动增强版机器人
   python start.py --test             # 测试模式运行
+  python start.py --test --enhanced  # 测试增强版
   python start.py --visualize        # 运行数据可视化
   python start.py --status           # 查看系统状态
   python start.py --clean            # 清理数据文件
@@ -225,6 +214,8 @@ def main():
         """
     )
     
+    parser.add_argument('--enhanced', action='store_true',
+                       help='使用增强版机器人（更多DEX、高级策略）')
     parser.add_argument('--test', action='store_true',
                        help='测试模式运行（使用测试参数）')
     parser.add_argument('--visualize', action='store_true',
@@ -241,15 +232,17 @@ def main():
                        help='显示配置信息')
     parser.add_argument('--backtest', action='store_true',
                        help='运行回测模式')
-    parser.add_argument('--enhanced', action='store_true',
-                       help='运行增强版机器人（需要额外依赖）')
     
     args = parser.parse_args()
     
     # 显示标题
     print("=" * 60)
-    print("🤖 套利机器人 基础版")
-    print("📡 监听模式 - 专注于价格监控和机会分析")
+    if args.enhanced:
+        print("🚀 套利机器人 增强版 V4")
+        print("⚡ 多DEX | 三角套利 | 闪电贷 | MEV保护")
+    else:
+        print("🤖 套利机器人 标准版 V3")
+        print("📡 监听模式 - 专注于价格监控和机会分析")
     print("=" * 60)
     
     # 处理命令
@@ -266,7 +259,7 @@ def main():
         return
     
     if args.config:
-        show_config()
+        show_config(args.enhanced)
         return
     
     # 检查环境
@@ -280,32 +273,57 @@ def main():
     
     # 运行机器人
     if args.visualize:
-        run_bot('visualize')
+        run_bot('visualize', args.enhanced)
     elif args.test:
-        run_bot('test')
+        run_bot('test', args.enhanced)
     elif args.backtest:
-        run_bot('backtest')
+        run_bot('backtest', args.enhanced)
     else:
-        run_bot('monitor')
+        run_bot('monitor', args.enhanced)
 
-def show_config():
+def show_config(enhanced=False):
     """显示配置信息"""
     print("\n⚙️ 配置信息")
     print("=" * 60)
     
-    print("📋 基础版配置:")
-    # 读取.env文件
-    if os.path.exists('.env'):
-        from dotenv import dotenv_values
-        config = dotenv_values('.env')
-        
-        print(f"\n🌐 RPC URL: {config.get('RPC_URL', 'N/A')[:50]}...")
-        print(f"💰 套利金额: ${config.get('AMOUNT_USDT', '100')} USDT")
-        print(f"💵 最小利润: ${config.get('MIN_NET_PROFIT_USDT', '0.5')} USDT")
-        print(f"⏱️ 扫描间隔: {config.get('SCAN_INTERVAL', '1')}秒")
-        print(f"📝 详细日志: {config.get('VERBOSE_LOGGING', 'true')}")
+    if enhanced:
+        print("📋 增强版配置:")
+        try:
+            from config_enhanced import (
+                get_enabled_dexes, TOKENS, ARBITRAGE_PARAMS,
+                FLASH_LOAN_PROVIDERS, MEV_PROTECTION
+            )
+            
+            print(f"\n🏪 启用的DEX: {', '.join(get_enabled_dexes())}")
+            print(f"💰 监控代币数: {len(TOKENS)}")
+            print(f"📊 套利金额: ${ARBITRAGE_PARAMS['amount_usdt']} USDT")
+            print(f"💵 最小利润: ${ARBITRAGE_PARAMS['min_profit_usdt']} USDT")
+            print(f"🔄 最大跳数: {ARBITRAGE_PARAMS['max_hops']}")
+            print(f"⚡ 闪电贷: {'启用' if ARBITRAGE_PARAMS['enable_flash_loan'] else '禁用'}")
+            print(f"🛡️ MEV保护: {'启用' if MEV_PROTECTION['enabled'] else '禁用'}")
+            
+            if ARBITRAGE_PARAMS['enable_flash_loan']:
+                print("\n💸 闪电贷提供者:")
+                for provider, config in FLASH_LOAN_PROVIDERS.items():
+                    if config.get('enabled'):
+                        print(f"  - {provider}: 费率 {config['fee_bps']/100:.2f}%")
+            
+        except ImportError:
+            print("⚠️ 增强版配置文件未找到")
     else:
-        print("⚠️ 配置文件.env未找到")
+        print("📋 标准版配置:")
+        # 读取.env文件
+        if os.path.exists('.env'):
+            from dotenv import dotenv_values
+            config = dotenv_values('.env')
+            
+            print(f"\n🌐 RPC URL: {config.get('RPC_URL', 'N/A')[:50]}...")
+            print(f"💰 套利金额: ${config.get('AMOUNT_USDT', '100')} USDT")
+            print(f"💵 最小利润: ${config.get('MIN_NET_PROFIT_USDT', '0.5')} USDT")
+            print(f"⏱️ 扫描间隔: {config.get('SCAN_INTERVAL', '1')}秒")
+            print(f"📝 详细日志: {config.get('VERBOSE_LOGGING', 'true')}")
+        else:
+            print("⚠️ 配置文件.env未找到")
     
     print("=" * 60)
 
