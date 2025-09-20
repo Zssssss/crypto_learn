@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
@@ -37,12 +36,17 @@ interface IPool {
  * @notice 支持 Aave 闪电贷和多 DEX 套利
  * @dev 实现了完整的闪电贷套利流程，包括安全检查和利润提取
  */
-contract FlashLoanArbitrage is IFlashLoanSimpleReceiver, Ownable, ReentrancyGuard {
+contract FlashLoanArbitrage is IFlashLoanSimpleReceiver, Ownable {
     // ========== 状态变量 ==========
     IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
     IPool public immutable POOL;
     ISwapRouter public immutable swapRouterV3;
     IUniswapV2Router02 public immutable swapRouterV2;
+    
+    // 重入保护
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+    uint256 private _status;
     
     // 支持的代币地址
     mapping(address => bool) public supportedTokens;
@@ -93,16 +97,25 @@ contract FlashLoanArbitrage is IFlashLoanSimpleReceiver, Ownable, ReentrancyGuar
         _;
     }
     
+    // ========== 修饰器 ==========
+    modifier nonReentrant() {
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+    
     // ========== 构造函数 ==========
     constructor(
         address _addressProvider,
         address _swapRouterV3,
         address _swapRouterV2
-    ) {
+    ) Ownable(msg.sender) {
         ADDRESSES_PROVIDER = IPoolAddressesProvider(_addressProvider);
         POOL = IPool(ADDRESSES_PROVIDER.getPool());
         swapRouterV3 = ISwapRouter(_swapRouterV3);
         swapRouterV2 = IUniswapV2Router02(_swapRouterV2);
+        _status = _NOT_ENTERED;
     }
     
     // ========== 管理函数 ==========

@@ -6,14 +6,14 @@ async function main() {
   console.log("🚀 开始部署套利合约...\n");
 
   // 获取部署账户
-  const [deployer] = await ethers.getSigners();
+  const [deployer] = await hre.ethers.getSigners();
   console.log("部署账户:", deployer.address);
   
   const balance = await deployer.getBalance();
-  console.log("账户余额:", ethers.utils.formatEther(balance), "ETH\n");
+  console.log("账户余额:", hre.ethers.utils.formatEther(balance), "ETH\n");
 
   // 网络配置
-  const network = await ethers.provider.getNetwork();
+  const network = await hre.ethers.provider.getNetwork();
   console.log("网络:", network.name, "(Chain ID:", network.chainId, ")\n");
 
   // 合约地址配置（Arbitrum 主网）
@@ -61,7 +61,7 @@ async function main() {
   try {
     // 1. 部署简单套利执行器
     console.log("1️⃣ 部署 USDTArbExecutor...");
-    const USDTArbExecutor = await ethers.getContractFactory("USDTArbExecutor");
+    const USDTArbExecutor = await hre.ethers.getContractFactory("USDTArbExecutor");
     const usdtExecutor = await USDTArbExecutor.deploy(
       config.usdt,
       config.sushiRouter
@@ -71,7 +71,7 @@ async function main() {
 
     // 2. 部署闪电贷套利合约
     console.log("\n2️⃣ 部署 FlashLoanArbitrage...");
-    const FlashLoanArbitrage = await ethers.getContractFactory("FlashLoanArbitrage");
+    const FlashLoanArbitrage = await hre.ethers.getContractFactory("FlashLoanArbitrage");
     const flashArbitrage = await FlashLoanArbitrage.deploy(
       config.aaveProvider,
       config.uniswapV3Router,

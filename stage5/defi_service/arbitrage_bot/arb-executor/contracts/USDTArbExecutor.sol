@@ -13,7 +13,7 @@ contract USDTArbExecutor is Ownable {
     address public usdt;
     address public router;
 
-    constructor(address _usdt, address _router) {
+    constructor(address _usdt, address _router) Ownable(msg.sender) {
         usdt = _usdt;
         router = _router;
     }
