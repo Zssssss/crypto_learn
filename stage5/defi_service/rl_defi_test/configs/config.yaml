@@ -1,0 +1,28 @@
+# hyper-parameters and paths
+data:
+  csv_path: data/sample_data.csv
+  symbol: "BTC-USD"
+  
+env:
+  window_size: 50
+  fee_rate: 0.0005
+  leverage: 10
+  max_position_size: 1.0
+  
+training:
+  total_timesteps: 200000
+  algo: dqn  # dqn or ppo
+  learning_rate: 0.0003
+  batch_size: 256
+  
+account:
+  initial_balance: 1000.0
+  max_drawdown: 0.1
+  
+realtime:
+  websocket_url: "wss://api.hyperliquid.xyz/ws"
+  symbol: "BTC-USD"
+  
+logging:
+  level: INFO
+  file: logs/trading.log
