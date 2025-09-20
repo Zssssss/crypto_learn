@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  airdrop-hunter:
+    build: .
+    container_name: airdrop-hunter-agent
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./chrome_data:/app/chrome_data
+      - ./.env:/app/.env:ro
+    environment:
+      - PYTHONPATH=/app
+      - DISPLAY=:99
+    networks:
+      - airdrop-network
+
+  # 可选：Redis缓存（用于分布式部署）
+  redis:
+    image: redis:7-alpine
+    container_name: airdrop-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - airdrop-network
+
+  # 可选：监控面板
+  grafana:
+    image: grafana/grafana:latest
+    container_name: airdrop-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - airdrop-network
+
+networks:
+  airdrop-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  grafana_data:

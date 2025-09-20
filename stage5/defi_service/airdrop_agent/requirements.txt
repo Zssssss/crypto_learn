@@ -1,0 +1,15 @@
+web3==6.15.1
+requests==2.31.0
+python-dotenv==1.0.0
+asyncio==3.4.3
+aiohttp==3.9.1
+beautifulsoup4==4.12.2
+selenium==4.15.2
+fake-useragent==1.4.0
+schedule==1.2.0
+colorama==0.4.6
+rich==13.7.0
+pydantic==2.5.2
+cryptography==41.0.7
+eth-account==0.10.0
+eth-keys==0.4.0
