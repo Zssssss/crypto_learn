@@ -2,6 +2,15 @@
 data:
   csv_path: data/sample_data.csv
   symbol: "BTC-USD"
+  interval: "1m"  # 1m, 5m, 15m, 1h, 4h, 1d
+  
+# Hyperliquid API配置
+hyperliquid:
+  base_url: "https://api.hyperliquid.xyz"
+  websocket_url: "wss://api.hyperliquid.xyz/ws"
+  symbol: "BTC-USD"
+  max_retries: 3
+  timeout: 30
   
 env:
   window_size: 50
@@ -22,7 +31,23 @@ account:
 realtime:
   websocket_url: "wss://api.hyperliquid.xyz/ws"
   symbol: "BTC-USD"
+  buffer_size: 1000
+  update_interval: 1
   
+# 数据验证配置
+validation:
+  max_price_change: 0.5  # 50% max price change
+  max_missing_ratio: 0.05  # 5% max missing data
+  max_outlier_ratio: 0.05  # 5% max outliers
+  
+# 日志配置
 logging:
   level: INFO
   file: logs/trading.log
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+# 输出目录
+output:
+  data_dir: "data/hyperliquid"
+  models_dir: "models"
+  logs_dir: "logs"
