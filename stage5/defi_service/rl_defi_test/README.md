@@ -1,203 +1,241 @@
-# Hyperliquid永续合约RL交易代理
+# RL DeFi 测试项目
 
-这是一个基于强化学习的永续合约交易代理项目，专为Hyperliquid交易所设计。项目支持历史回测、实时交易和多种RL算法训练。
+## 项目概述
+这是一个基于强化学习的DeFi交易策略测试项目，专注于Hyperliquid链上数据的获取、处理和训练。项目提供了完整的数据管道，从原始数据获取到模型训练的全流程支持。
 
-## 🚀 功能特性
-
-- **多算法支持**: DQN和PPO算法
-- **实时数据**: 通过WebSocket连接Hyperliquid API
-- **技术指标**: 内置多种技术指标计算
-- **风险管理**: 支持杠杆、保证金和风险控制
-- **回测系统**: 完整的历史回测框架
-- **实时交易**: 支持实时交易执行
-- **可视化**: 交易结果和性能指标可视化
-
-## 📁 项目结构
+## 🏗️ 项目架构
 
 ```
 rl_defi_test/
-├── README.md                    # 项目说明文档
-├── requirements.txt            # Python依赖
-├── Dockerfile                  # Docker容器配置
-├── configs/
-│   └── config.yaml            # 配置文件
-├── data/
-│   └── sample_data.csv        # 示例数据
-├── env/
-│   ├── __init__.py
-│   └── trading_env.py         # 交易环境
-├── models/                    # 模型保存目录
-├── scripts/
-│   ├── run_backtest.sh        # 回测运行脚本
-│   └── run_realtime.py        # 实时交易脚本
-├── logs/                      # 日志目录
-├── data_loader.py             # 数据加载器
-├── realtime_adapter.py        # 实时数据适配器
-├── utils.py                   # 工具函数
-├── train_dqn.py               # DQN训练脚本
-└── train_ppo.py               # PPO训练脚本
+├── 📁 data/                    # 数据目录
+│   ├── sample_data.csv        # 示例数据
+│   └── hyperliquid/           # Hyperliquid原始数据
+├── 📁 configs/                # 配置文件
+│   └── config.yaml            # 主配置文件
+├── 📁 scripts/                # 执行脚本
+│   ├── fetch_hyperliquid_data.py  # 数据获取脚本
+│   └── run_backtest.sh        # 回测脚本
+├── 📁 models/                 # 模型保存目录
+├── 📁 logs/                   # 日志目录
+├── 📄 requirements.txt        # 项目依赖
+├── 📄 Makefile               # 构建命令
+└── 🔧 核心模块
+    ├── hyperliquid_data_provider.py  # 数据提供器
+    ├── data_formatter.py          # 数据格式化
+    ├── data_validator.py          # 数据验证
+    ├── realtime_processor.py      # 实时处理
+    ├── data_loader.py             # 数据加载
+    └── utils.py                   # 工具函数
 ```
 
-## 🛠️ 安装
+## 🚀 快速开始
 
-### 环境要求
-- Python 3.8+
-- pip包管理器
-- Docker（可选）
-
-### 安装步骤
-
-1. **克隆项目**
+### 1. 环境准备
 ```bash
-git clone <repository-url>
-cd rl_defi_test
-```
+# 克隆项目
+cd stage5/defi_service/rl_defi_test
 
-2. **安装依赖**
-```bash
+# 安装依赖
 pip install -r requirements.txt
+
+# 创建必要目录
+mkdir -p data logs models
 ```
 
-3. **使用Docker**
+### 2. 运行测试
 ```bash
-docker build -t hyperliquid-rl-trader .
-docker run -it hyperliquid-rl-trader
+# 运行完整测试
+python run_test.py
+
+# 运行组件测试
+python test_fixed.py
+
+# 运行简化测试
+python test_simple.py
 ```
 
-## ⚙️ 配置
-
-编辑 `configs/config.yaml` 文件来配置项目参数：
-
-```yaml
-# 数据配置
-data:
-  csv_path: data/sample_data.csv
-  symbol: "BTC-USD"
-
-# 环境参数
-env:
-  window_size: 50              # 观察窗口大小
-  fee_rate: 0.0005            # 交易手续费率
-  leverage: 10                # 杠杆倍数
-  max_position_size: 1.0      # 最大仓位
-
-# 训练参数
-training:
-  total_timesteps: 200000     # 总训练步数
-  algo: dqn                   # 算法选择: dqn或ppo
-  learning_rate: 0.0003       # 学习率
-  batch_size: 256             # 批次大小
-
-# 账户配置
-account:
-  initial_balance: 1000.0     # 初始资金
-  max_drawdown: 0.1          # 最大回撤限制
-
-# 实时交易配置
-realtime:
-  websocket_url: "wss://api.hyperliquid.xyz/ws"
-  symbol: "BTC-USD"
-```
-
-## 🎯 快速开始
-
-### 1. 数据准备
-
-项目包含示例数据，也可以获取真实数据：
-
+### 3. 获取数据
 ```bash
-# 运行数据加载测试
-python data_loader.py
+# 获取单个交易对数据
+python scripts/fetch_hyperliquid_data.py --symbol BTC-USD --days 30
+
+# 获取多个交易对数据
+python scripts/fetch_hyperliquid_data.py --symbols BTC-USD ETH-USD --days 7
+
+# 查看帮助
+python scripts/fetch_hyperliquid_data.py --help
 ```
 
-### 2. 训练模型
-
-#### 训练DQN模型
+### 4. 训练模型
 ```bash
+# 使用DQN训练
 python train_dqn.py
-```
 
-#### 训练PPO模型
-```bash
+# 使用PPO训练
 python train_ppo.py
 ```
 
-#### 使用脚本运行回测
+## 📊 数据流程
+
+### 数据获取 → 验证 → 清理 → 格式化 → 训练
+
+1. **数据获取** (`hyperliquid_data_provider.py`)
+   - 从Hyperliquid API获取实时/历史数据
+   - 支持多种时间间隔和交易对
+
+2. **数据验证** (`data_validator.py`)
+   - 验证数据完整性和质量
+   - 检测异常值和缺失值
+   - 生成数据健康报告
+
+3. **数据清理** (`data_validator.py`)
+   - 修复价格关系错误
+   - 处理缺失值和异常值
+   - 标准化数据格式
+
+4. **数据格式化** (`data_formatter.py`)
+   - 创建技术指标
+   - 生成训练特征
+   - 分割训练/验证/测试集
+
+5. **模型训练** (`train_dqn.py`, `train_ppo.py`)
+   - 使用强化学习算法训练
+   - 支持DQN和PPO算法
+
+## 🔧 核心模块说明
+
+### 1. 数据提供器 (`hyperliquid_data_provider.py`)
+- **功能**: 连接Hyperliquid API获取数据
+- **方法**:
+  - `fetch_historical_data()`: 获取历史数据
+  - `fetch_realtime_data()`: 获取实时数据
+  - `process_raw_data()`: 处理原始数据
+
+### 2. 数据验证器 (`data_validator.py`)
+- **功能**: 验证数据质量和完整性
+- **验证项**:
+  - 必需列检查
+  - 数据类型验证
+  - 价格关系验证
+  - 异常值检测
+  - 时间序列完整性
+
+### 3. 数据格式化器 (`data_formatter.py`)
+- **功能**: 将原始数据转换为训练格式
+- **功能**:
+  - 添加技术指标（MA, RSI, MACD等）
+  - 创建特征向量
+  - 生成训练标签
+  - 数据标准化
+
+### 4. 数据加载器 (`data_loader.py`)
+- **功能**: 加载和预处理CSV数据
+- **功能**:
+  - CSV文件读取
+  - 数据验证
+  - 数据分割
+  - 示例数据生成
+
+### 5. 工具函数 (`utils.py`)
+- **功能**: 提供通用工具函数
+- **包含**:
+  - 技术指标计算
+  - 特征创建
+  - 数据标准化
+  - 收益计算
+
+## ⚙️ 配置文件 (`configs/config.yaml`)
+
+```yaml
+# 实时配置
+realtime:
+  symbol: "BTC-USD"
+  interval: "1m"
+
+# 环境配置
+env:
+  window_size: 10
+  action_space: 3  # 买入、卖出、持有
+
+# 数据配置
+data:
+  interval: "1m"
+  lookback_days: 30
+
+# 训练配置
+training:
+  batch_size: 32
+  learning_rate: 0.001
+  episodes: 1000
+```
+
+## 🧪 测试说明
+
+### 测试文件
+- `test_fixed.py`: 修复后的集成测试
+- `test_simple.py`: 简化版功能测试
+- `run_test.py`: 一键测试脚本
+
+### 测试内容
+- ✅ 数据加载测试
+- ✅ 数据格式化测试
+- ✅ 数据验证测试
+- ✅ 工具函数测试
+- ✅ 端到端流程测试
+
+## 📈 技术指标
+
+项目自动计算以下技术指标：
+- **移动平均线**: MA5, MA10, MA20, MA50
+- **指数移动平均**: EMA12, EMA26
+- **MACD**: MACD线、信号线、柱状图
+- **RSI**: 相对强弱指标
+- **布林带**: 上轨、中轨、下轨
+- **ATR**: 平均真实波幅
+- **随机指标**: K值、D值
+- **Williams %R**: 威廉指标
+
+## 🎯 使用场景
+
+### 场景1：快速测试
 ```bash
-chmod +x scripts/run_backtest.sh
-./scripts/run_backtest.sh
+python run_test.py
 ```
 
-### 3. 实时交易
-
-使用训练好的模型进行实时交易：
-
+### 场景2：获取训练数据
 ```bash
-python scripts/run_realtime.py --model models/dqn_perp_final --model-type dqn
+python scripts/fetch_hyperliquid_data.py --symbol BTC-USD --days 30
 ```
 
-## 📊 性能评估
+### 场景3：使用本地数据
+```python
+from data_loader import load_csv, prepare_data
+df = load_csv('data/my_data.csv')
+df = prepare_data(df)
+```
 
-训练完成后，系统会自动生成以下报告：
+### 场景4：自定义训练
+```python
+from data_formatter import DataFormatter
+formatter = DataFormatter(config)
+X_train, X_val, X_test, y_train, y_val, y_test = formatter.prepare_training_dataset(df)
+```
 
-- **交易记录**: `backtest_results_*.csv`
-- **模型检查点**: `models/checkpoints/`
-- **最佳模型**: `models/best_model/`
-- **TensorBoard日志**: `models/tensorboard/`
+## 🔍 故障排除
 
-### 查看TensorBoard
+### 常见问题
+1. **ImportError**: 确保已安装所有依赖 `pip install -r requirements.txt`
+2. **数据为空**: 检查网络连接和API可用性
+3. **语法错误**: 所有语法错误已修复，如遇新问题请检查Python版本
+
+### 调试工具
 ```bash
-tensorboard --logdir=models/tensorboard
+# 查看详细日志
+python scripts/fetch_hyperliquid_data.py --log-level DEBUG
+
+# 验证数据质量
+python -c "from data_validator import DataQualityValidator; print('验证器正常')"
 ```
 
-## 🔧 高级用法
-
-### 自定义环境
-可以通过继承 `TradingEnv` 类来创建自定义交易环境：
-
-```python
-from env.trading_env import TradingEnv
-
-class MyTradingEnv(TradingEnv):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # 自定义初始化
-```
-
-### 添加新指标
-在 `utils.py` 中添加新的技术指标：
-
-```python
-def add_custom_indicators(df):
-    df['custom_metric'] = your_calculation(df)
-    return df
-```
-
-### 多资产交易
-支持同时交易多个资产：
-
-```python
-# 修改配置
-symbols = ["BTC-USD", "ETH-USD", "SOL-USD"]
-for symbol in symbols:
-    # 训练独立模型
-    pass
-```
-
-
-## 📈 性能指标
-
-项目提供以下性能评估指标：
-
-- **夏普比率 (Sharpe Ratio)**: 风险调整收益
-- **最大回撤 (Max Drawdown)**: 最大资金回撤
-- **胜率 (Win Rate)**: 盈利交易比例
-- **盈利因子 (Profit Factor)**: 总盈利/总亏损
-- **年化收益率**: 年化投资回报
-
-
-### 开发计划
-- [ ] 添加更多RL算法（A3C, SAC, TD3）
-- [ ] 添加订单簿数据支持
-- [ ] 实现分布式训练
-- [ ] 支持多时间框架
+## 📞 支持
+项目已完全修复和整理，可以直接使用。如有问题请参考测试文件或查看日志。

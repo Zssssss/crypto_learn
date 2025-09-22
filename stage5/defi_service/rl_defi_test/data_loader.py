@@ -1,237 +1,142 @@
+"""
+数据加载模块
+用于加载和预处理CSV数据
+"""
 import pandas as pd
 import numpy as np
 from typing import Optional, Tuple
 import logging
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
 
-def load_csv(path: str, **kwargs) -> pd.DataFrame:
-    """
-    加载CSV数据文件
-    
-    Args:
-        path: CSV文件路径
-        **kwargs: pandas.read_csv的其他参数
-    
-    Returns:
-        DataFrame包含OHLCV数据
-    
-    Raises:
-        ValueError: 如果缺少必要的列
-    """
+def load_csv(filepath: str) -> pd.DataFrame:
+    """从CSV文件加载数据"""
     try:
-        df = pd.read_csv(path, **kwargs)
-        
-        # 标准化列名
-        column_mapping = {
-            'Timestamp': 'timestamp',
-            'Open': 'open',
-            'High': 'high',
-            'Low': 'low',
-            'Close': 'close',
-            'Volume': 'volume'
-        }
-        
-        # 重命名列
-        for old_name, new_name in column_mapping.items():
-            if old_name in df.columns:
-                df = df.rename(columns={old_name: new_name})
-        
-        # 检查必要列
-        required_columns = ["timestamp", "open", "high", "low", "close", "volume"]
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        
-        if missing_columns:
-            raise ValueError(f"Missing required columns: {missing_columns}")
-        
-        # 确保数据类型正确
-        numeric_columns = ["open", "high", "low", "close", "volume"]
-        for col in numeric_columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-        
-        # 处理时间戳
-        if df['timestamp'].dtype == 'object':
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-        
-        # 按时间排序
-        df = df.sort_values("timestamp").reset_index(drop=True)
-        
-        # 检查数据完整性
-        if df.isnull().any().any():
-            logger.warning("Data contains NaN values, filling forward...")
-            df = df.fillna(method='ffill')
-        
-        logger.info(f"Loaded {len(df)} rows of data from {path}")
+        df = pd.read_csv(filepath)
+        logger.info(f"Loaded {len(df)} records from {filepath}")
         return df
-        
+    except FileNotFoundError:
+        logger.error(f"File not found: {filepath}")
+        return pd.DataFrame()
     except Exception as e:
-        logger.error(f"Error loading CSV: {str(e)}")
-        raise
+        logger.error(f"Error loading CSV: {e}")
+        return pd.DataFrame()
 
 
-def prepare_data(df: pd.DataFrame, window_size: int = 50) -> Tuple[pd.DataFrame, np.ndarray]:
-    """
-    准备训练数据
+def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
+    """准备数据用于训练"""
+    if df.empty:
+        return df
     
-    Args:
-        df: 原始数据DataFrame
-        window_size: 窗口大小
+    # 确保时间戳格式正确
+    if 'timestamp' in df.columns:
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
     
-    Returns:
-        处理后的DataFrame和特征数组
-    """
-    # 计算技术指标
-    from utils import add_technical_indicators
+    # 确保数值列是数值类型
+    numeric_columns = ['open', 'high', 'low', 'close', 'volume']
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
     
-    df = add_technical_indicators(df)
+    # 按时间排序
+    df = df.sort_values('timestamp').reset_index(drop=True)
     
-    # 创建特征
-    features = []
-    for i in range(window_size, len(df)):
-        window = df.iloc[i-window_size:i]
-        feature = create_features(window)
-        features.append(feature)
+    # 填充缺失值
+    df = df.fillna(method='ffill').fillna(0)
     
-    features = np.array(features)
-    
-    # 移除前window_size行
-    df = df.iloc[window_size:].reset_index(drop=True)
-    
-    return df, features
+    return df
 
 
-def create_features(window: pd.DataFrame) -> np.ndarray:
-    """
-    从窗口数据创建特征
+def validate_data(df: pd.DataFrame) -> bool:
+    """验证数据有效性"""
+    if df.empty:
+        return False
     
-    Args:
-        window: 时间窗口数据
+    # 检查必需列
+    required_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+    missing_columns = [col for col in required_columns if col not in df.columns]
     
-    Returns:
-        特征数组
-    """
-    features = []
+    if missing_columns:
+        logger.warning(f"Missing columns: {missing_columns}")
+        return False
     
-    # 价格特征
-    close_prices = window['close'].values
-    returns = np.diff(close_prices) / close_prices[:-1]
+    # 检查NaN值
+    if df[required_columns].isnull().any().any():
+        logger.warning("Data contains NaN values")
+        return False
     
-    # 基础统计特征
-    features.extend([
-        close_prices[-1],  # 最新价格
-        np.mean(close_prices),  # 平均价格
-        np.std(close_prices),   # 价格波动
-        np.max(close_prices),   # 最高价
-        np.min(close_prices),   # 最低价
-    ])
+    # 检查价格关系
+    if 'high' in df.columns and 'low' in df.columns:
+        invalid = df[df['high'] < df['low']]
+        if not invalid.empty:
+            logger.warning("Invalid price relationship: high < low")
+            return False
     
-    # 技术指标特征
-    if 'rsi' in window.columns:
-        features.append(window['rsi'].iloc[-1])
-    if 'ma10' in window.columns:
-        features.append(window['ma10'].iloc[-1])
-    if 'ma50' in window.columns:
-        features.append(window['ma50'].iloc[-1])
-    if 'atr' in window.columns:
-        features.append(window['atr'].iloc[-1])
+    # 检查非负值
+    for col in ['open', 'high', 'low', 'close', 'volume']:
+        if col in df.columns and (df[col] < 0).any():
+            logger.warning(f"Negative values in {col}")
+            return False
     
-    # 成交量特征
-    volumes = window['volume'].values
-    features.extend([
-        volumes[-1],  # 最新成交量
-        np.mean(volumes),  # 平均成交量
-        np.std(volumes),   # 成交量波动
-    ])
-    
-    # 价格动量
-    if len(returns) > 0:
-        features.extend([
-            returns[-1],  # 最新收益率
-            np.mean(returns),  # 平均收益率
-            np.std(returns),   # 收益率波动
-        ])
-    
-    return np.array(features)
+    return True
 
 
 def split_data(df: pd.DataFrame, train_ratio: float = 0.7, val_ratio: float = 0.15) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """
-    分割数据集
+    """分割数据集"""
+    if df.empty:
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     
-    Args:
-        df: 完整数据集
-        train_ratio: 训练集比例
-        val_ratio: 验证集比例
+    total_len = len(df)
+    train_len = int(total_len * train_ratio)
+    val_len = int(total_len * val_ratio)
     
-    Returns:
-        训练集、验证集、测试集
-    """
-    n = len(df)
-    train_end = int(n * train_ratio)
-    val_end = int(n * (train_ratio + val_ratio))
-    
-    train_df = df[:train_end].copy()
-    val_df = df[train_end:val_end].copy()
-    test_df = df[val_end:].copy()
+    train_df = df[:train_len]
+    val_df = df[train_len:train_len + val_len]
+    test_df = df[train_len + val_len:]
     
     logger.info(f"Data split - Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
     
     return train_df, val_df, test_df
 
 
-def validate_data(df: pd.DataFrame) -> bool:
-    """
-    验证数据质量
+def create_sample_data(filepath: str, num_records: int = 1000):
+    """创建示例数据用于测试"""
+    # 生成时间戳
+    start_time = datetime.now() - timedelta(days=30)
+    timestamps = [start_time + timedelta(minutes=i) for i in range(num_records)]
     
-    Args:
-        df: 待验证的DataFrame
+    # 生成价格数据
+    np.random.seed(42)
+    base_price = 40000
     
-    Returns:
-        数据是否有效
-    """
-    if df is None or df.empty:
-        logger.error("DataFrame is empty")
-        return False
+    prices = [base_price]
+    for i in range(1, num_records):
+        change = np.random.normal(0, 0.001)
+        new_price = max(prices[-1] * (1 + change), 1000)  # 确保价格不会太低
+        prices.append(new_price)
     
-    # 检查价格数据
-    price_columns = ['open', 'high', 'low', 'close']
-    for col in price_columns:
-        if (df[col] <= 0).any():
-            logger.error(f"Invalid {col} values (<= 0)")
-            return False
-    
-    # 检查高低价关系
-    if not (df['high'] >= df['low']).all():
-        logger.error("High price must be >= low price")
-        return False
-    
-    # 检查时间戳
-    if not df['timestamp'].is_monotonic_increasing:
-        logger.error("Timestamps must be monotonically increasing")
-        return False
-    
-    logger.info("Data validation passed")
-    return True
-
-
-if __name__ == "__main__":
-    # 测试数据加载
-    import os
-    
-    config_path = "configs/config.yaml"
-    if os.path.exists(config_path):
-        import yaml
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
+    # 创建OHLCV数据
+    data = []
+    for i, (timestamp, close) in enumerate(zip(timestamps, prices)):
+        volatility = abs(np.random.normal(0, 0.002))
+        high = close * (1 + volatility)
+        low = close * (1 - volatility)
+        open_price = prices[i-1] if i > 0 else close
+        volume = abs(np.random.normal(1000, 200))
         
-        csv_path = config['data']['csv_path']
-        if os.path.exists(csv_path):
-            df = load_csv(csv_path)
-            print(f"Loaded {len(df)} rows")
-            print(df.head())
-            validate_data(df)
-        else:
-            print(f"CSV file not found: {csv_path}")
-    else:
-        print("Config file not found")
+        data.append({
+            'timestamp': timestamp,
+            'open': open_price,
+            'high': high,
+            'low': low,
+            'close': close,
+            'volume': volume,
+            'symbol': 'BTC-USD'
+        })
+    
+    df = pd.DataFrame(data)
+    df.to_csv(filepath, index=False)
+    logger.info(f"Created sample data with {len(df)} records at {filepath}")
+    return df

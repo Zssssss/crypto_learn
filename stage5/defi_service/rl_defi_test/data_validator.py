@@ -349,7 +349,7 @@ class DataQualityValidator:
         
         if all(col in df_fixed.columns for col in ['high', 'low', 'close']):
             # 确保high >= max(open, close, low)
-            df_fixed['high'] = df_fixed[['high', 'open', 'close', 'low']].axis=1).max(axis=1)
+            df_fixed['high'] = df_fixed[['high', 'open', 'close', 'low']].max(axis=1)
             
             # 确保low <= min(open, close, high)
             df_fixed['low'] = df_fixed[['low', 'open', 'close', 'high']].min(axis=1)

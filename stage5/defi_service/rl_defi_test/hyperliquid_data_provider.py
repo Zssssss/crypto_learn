@@ -6,13 +6,17 @@ import asyncio
 import aiohttp
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, AsyncGenerator
 import logging
 from datetime import datetime, timedelta
 import json
 import time
 from dataclasses import dataclass
-import websockets
+
+try:
+    import websockets
+except ImportError:
+    websockets = None
 
 from data_loader import load_csv, prepare_data, validate_data
 from utils import add_technical_indicators, create_features

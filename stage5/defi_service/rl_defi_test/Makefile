@@ -1,66 +1,91 @@
-.PHONY: help install test fetch-data clean lint format
+# 🚀 RL DeFi 项目 Makefile
+
+.PHONY: help install test clean setup data train all
 
 # 默认目标
+.DEFAULT_GOAL := help
+
+# 变量
+PYTHON := python3
+PIP := pip3
+
+## 📋 帮助信息
 help:
-	@echo "Hyperliquid RL DeFi 数据获取和处理工具"
+	@echo "🎯 RL DeFi 项目 - 可用命令"
 	@echo ""
-	@echo "可用命令:"
-	@echo "  install      - 安装依赖"
-	@echo "  test         - 运行测试"
-	@echo "  fetch-data   - 获取Hyperliquid数据"
-	@echo "  clean        - 清理数据文件"
-	@echo "  lint         - 代码检查"
-	@echo "  format       - 代码格式化"
+	@echo "📦 安装和设置:"
+	@echo "  make setup     - 一键设置环境"
+	@echo "  make install   - 安装依赖"
 	@echo ""
+	@echo "🧪 测试:"
+	@echo "  make test      - 运行所有测试"
+	@echo "  make quick     - 快速测试"
+	@echo ""
+	@echo "📊 数据:"
+	@echo "  make data      - 获取示例数据"
+	@echo "  make clean     - 清理数据"
+	@echo ""
+	@echo "🤖 训练:"
+	@echo "  make train     - 训练DQN模型"
+	@echo "  make train-ppo - 训练PPO模型"
+	@echo ""
+	@echo "🔧 开发:"
+	@echo "  make format    - 格式化代码"
+	@echo "  make lint      - 代码检查"
 
-# 安装依赖
+## 📦 环境设置
+setup:
+	@echo "🔧 设置项目环境..."
+	@mkdir -p data logs models
+	@$(PIP) install -r requirements.txt
+	@echo "✅ 环境设置完成"
+
 install:
-	pip install -r requirements.txt
+	@echo "📦 安装依赖..."
+	@$(PIP) install -r requirements.txt
+	@echo "✅ 依赖安装完成"
 
-# 运行测试
+## 🧪 测试
 test:
-	python test_hyperliquid_integration.py
+	@echo "🧪 运行完整测试..."
+	@$(PYTHON) run_test.py
 
-# 获取数据
-fetch-data:
-	python scripts/fetch_hyperliquid_data.py --days 30 --symbol BTC-USD
+quick:
+	@echo "⚡ 运行快速测试..."
+	@$(PYTHON) test_fixed.py
 
-# 获取多个交易对数据
-fetch-multi:
-	python scripts/fetch_hyperliquid_data.py --symbols BTC-USD ETH-USD SOL-USD --days 7
+## 📊 数据管理
+data:
+	@echo "📊 获取示例数据..."
+	@$(PYTHON) -c "from data_loader import create_sample_data; create_sample_data('data/sample_data.csv', 1000)"
+	@echo "✅ 示例数据创建完成"
 
-# 清理数据文件
 clean:
-	rm -rf data/hyperliquid/*
-	rm -rf logs/*
-	rm -rf models/*
+	@echo "🧹 清理数据..."
+	@rm -rf data/*.csv data/*.npz logs/*
+	@echo "✅ 清理完成"
 
-# 代码检查
-lint:
-	python -m flake8 *.py scripts/ --max-line-length=100
+## 🤖 训练
+train:
+	@echo "🤖 开始DQN训练..."
+	@$(PYTHON) train_dqn.py
 
-# 代码格式化
+train-ppo:
+	@echo "🤖 开始PPO训练..."
+	@$(PYTHON) train_ppo.py
+
+## 🔧 开发工具
 format:
-	python -m black *.py scripts/ --line-length=100
+	@echo "🎨 格式化代码..."
+	@black *.py scripts/*.py
 
-# 实时数据测试
-test-realtime:
-	python -c "import asyncio; from realtime_processor import RealtimeDataProcessor; import yaml; asyncio.run(RealtimeDataProcessor(yaml.safe_load(open('configs/config.yaml'))).start())"
+lint:
+	@echo "🔍 代码检查..."
+	@flake8 *.py scripts/*.py --max-line-length=100
 
-# 创建必要的目录
-setup-dirs:
-	mkdir -p data/hyperliquid
-	mkdir -p logs
-	mkdir -p models
-	mkdir -p data/realtime
-
-# 运行所有检查
-check: lint test
-
-# 开发环境设置
-dev-setup: setup-dirs install
-	@echo "开发环境设置完成！"
-
-# 快速测试
-quick-test:
-	python -c "import asyncio; from hyperliquid_data_provider import HyperliquidDataProvider, HyperliquidConfig; async def test(): p = HyperliquidDataProvider(HyperliquidConfig()); print(await p.get_market_info()); await p.close(); asyncio.run(test())"
+## 🚀 一键运行
+all: setup test data
+	@echo "🎉 项目准备完成！"
+	@echo "下一步："
+	@echo "1. 运行 'make train' 开始训练"
+	@echo "2. 查看 'README.md' 获取完整文档"
